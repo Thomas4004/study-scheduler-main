@@ -1,0 +1,189 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TopicStatus {
+  TO_STUDY
+  REVIEW
+  MASTERED
+  ARCHIVED
+}
+
+enum EnergyCurve {
+  MORNING
+  AFTERNOON
+  NIGHT
+}
+
+enum StudySessionType {
+  FIRST_PASS
+  REVIEW
+}
+
+enum ExamSetupSource {
+  MANUAL
+  AI_SYLLABUS
+}
+
+enum ExamIntensity {
+  SIMPLE
+  MEDIUM
+  HARD
+}
+
+enum ExamStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model User {
+  id                    String      @id @default(cuid())
+  name                  String?
+  energy_curve          EnergyCurve @default(MORNING)
+  weekly_hours_template Json        @default("{\"monday\":2,\"tuesday\":2,\"wednesday\":2,\"thursday\":2,\"friday\":2,\"saturday\":4,\"sunday\":0}")
+  secret_token          String      @unique
+  calendar_feed_token   String?     @unique
+  max_focus_minutes     Int         @default(50)
+  pomodoro_focus_minutes Int        @default(25)
+  pomodoro_short_break_minutes Int  @default(5)
+  pomodoro_long_break_minutes Int   @default(15)
+  degree_target_cfu     Int         @default(180)
+  courses               Course[]
+  exams                 Exam[]
+  created_at            DateTime    @default(now())
+  updated_at            DateTime    @updatedAt
+
+  @@index([secret_token])
+  @@index([calendar_feed_token])
+}
+
+model Course {
+  id           String   @id @default(cuid())
+  name         String
+  cfu          Int      @default(0)
+  isPassFail   Boolean  @default(false)
+  isCompleted  Boolean  @default(false)
+  isArchived   Boolean  @default(false)
+  resourceLink String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exams        Exam[]
+  topics       Topic[]
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, name])
+  @@index([userId, isCompleted])
+  @@index([userId, isArchived])
+}
+
+model Exam {
+  id               String          @id @default(cuid())
+  name             String
+  color_code       String          @default("#3B82F6")
+  difficulty       Int
+  intensity        ExamIntensity   @default(MEDIUM)
+  setup_source     ExamSetupSource @default(MANUAL)
+  syllabus_raw     String?         @db.Text
+  exam_date        DateTime
+  buffer_days      Int             @default(2)
+  status           ExamStatus      @default(ACTIVE)
+  weight           Float           @default(1)
+  grade            Int?
+  completedAt      DateTime?
+  notes            String?         @db.Text
+  userId           String
+  courseId         String?
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           Course?         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  planningPreference ExamPlanningPreference?
+  topics           Topic[]         @relation("ExamTopics")
+  study_sessions   StudySession[]
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  @@index([userId, exam_date])
+  @@index([userId, status, exam_date])
+  @@index([userId, setup_source])
+  @@index([courseId, exam_date])
+}
+
+model ExamPlanningPreference {
+  examId               String   @id
+  earliest_start_date  DateTime?
+  exam                 Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@index([earliest_start_date])
+}
+
+model Topic {
+  id                String         @id @default(cuid())
+  courseId          String?
+  course            Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  exams             Exam[]         @relation("ExamTopics")
+  name              String
+  status            TopicStatus    @default(TO_STUDY)
+  generated_by_ai   Boolean        @default(false)
+  difficulty_weight Float          @default(1)
+  ease_factor       Float          @default(2.5)
+  interval_days     Int            @default(1)
+  last_reviewed     DateTime?
+  next_review       DateTime?
+  resources         Json           @default("[]")
+  materials         Material[]
+  study_sessions    StudySession[]
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  @@index([courseId, status])
+  @@index([courseId, next_review])
+}
+
+model Material {
+  id         String   @id @default(cuid())
+  topicId    String
+  topic      Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title      String
+  url        String
+  type       String   @default("REFERENCE")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([topicId])
+  @@index([topicId, type])
+}
+
+model StudySession {
+  id           String           @id @default(cuid())
+  examId       String
+  topicId      String?
+  exam         Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  topic        Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  planned_date DateTime
+  planned_hours Float
+  actual_hours Float            @default(0)
+  confidence_score Int?
+  confidence_logged_at DateTime?
+  type         StudySessionType @default(FIRST_PASS)
+  is_placeholder Boolean        @default(false)
+  is_completed Boolean          @default(false)
+  created_at   DateTime         @default(now())
+  updated_at   DateTime         @updatedAt
+
+  @@index([examId, planned_date])
+  @@index([topicId, planned_date])
+  @@index([examId, confidence_logged_at])
+  @@index([examId, is_placeholder, planned_date])
+}
+
