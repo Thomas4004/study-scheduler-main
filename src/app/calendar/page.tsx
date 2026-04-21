@@ -77,8 +77,9 @@ async function getCalendarData() {
   }
 
   const fromDate = startOfMonth(new Date());
+  const toDate = new Date(fromDate.getFullYear(), fromDate.getMonth() + 2, 0);
 
-  const [sessions, exams, collisions] = await Promise.all([
+  const [sessions, exams, collisions, externalCalendars] = await Promise.all([
     prisma.studySession.findMany({
       where: {
         exam: {
@@ -136,6 +137,19 @@ async function getCalendarData() {
     }),
     detectStudyLoadCollisions(user.id, {
       referenceDate: fromDate,
+    }),
+    // Fetch external calendars
+    prisma.externalCalendar.findMany({
+      where: {
+        userId: user.id,
+        isEnabled: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        color_code: true,
+      },
     }),
   ]);
 

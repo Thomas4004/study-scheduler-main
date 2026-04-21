@@ -58,6 +58,7 @@ model User {
   degree_target_cfu     Int         @default(180)
   courses               Course[]
   exams                 Exam[]
+  externalCalendars     ExternalCalendar[]
   created_at            DateTime    @default(now())
   updated_at            DateTime    @updatedAt
 
@@ -185,5 +186,22 @@ model StudySession {
   @@index([topicId, planned_date])
   @@index([examId, confidence_logged_at])
   @@index([examId, is_placeholder, planned_date])
+}
+
+model ExternalCalendar {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  url          String
+  color_code   String   @default("#8B5CF6")
+  isEnabled    Boolean  @default(true)
+  syncedAt     DateTime?
+  lastError    String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isEnabled])
 }
 

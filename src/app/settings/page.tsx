@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ExternalCalendarImport } from "@/components/external-calendar-import";
 import prisma from "@/lib/prisma";
 import { isMissingColumnError } from "@/lib/prisma-compat";
 
@@ -198,6 +199,8 @@ export default async function SettingsPage() {
           </Button>
         </form>
       </Card>
+
+      <ExternalCalendarImport />
     </div>
   );
 }
