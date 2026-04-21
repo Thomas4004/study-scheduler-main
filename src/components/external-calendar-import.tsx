@@ -26,7 +26,11 @@ interface ExternalCalendar {
   lastError?: string;
 }
 
-export function ExternalCalendarImport() {
+interface ExternalCalendarImportProps {
+  secretToken: string;
+}
+
+export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +49,7 @@ export function ExternalCalendarImport() {
     try {
       const response = await fetch("/api/calendar/external", {
         headers: {
-          "x-secret-key": localStorage.getItem("secret_token") || "",
+          "x-secret-key": secretToken,
         },
       });
 
@@ -101,7 +105,7 @@ export function ExternalCalendarImport() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-secret-key": localStorage.getItem("secret_token") || "",
+            "x-secret-key": secretToken,
           },
           body: JSON.stringify({
             name: calendarName,
@@ -159,7 +163,7 @@ export function ExternalCalendarImport() {
         const response = await fetch("/api/calendar/import-file", {
           method: "POST",
           headers: {
-            "x-secret-key": localStorage.getItem("secret_token") || "",
+            "x-secret-key": secretToken,
           },
           body: formData,
         });
@@ -201,7 +205,7 @@ export function ExternalCalendarImport() {
           {
             method: "DELETE",
             headers: {
-              "x-secret-key": localStorage.getItem("secret_token") || "",
+              "x-secret-key": secretToken,
             },
           }
         );
@@ -228,7 +232,7 @@ export function ExternalCalendarImport() {
           `/api/calendar/sync-proxy/${calendarId}`,
           {
             headers: {
-              "x-secret-key": localStorage.getItem("secret_token") || "",
+              "x-secret-key": secretToken,
             },
           }
         );

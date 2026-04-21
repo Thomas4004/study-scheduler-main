@@ -26,6 +26,7 @@ export default async function SettingsPage() {
     pomodoro_short_break_minutes: number;
     pomodoro_long_break_minutes: number;
     degree_target_cfu: number;
+    secret_token: string;
   };
 
   let user: SettingsUserRecord | null = null;
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
         pomodoro_short_break_minutes: true,
         pomodoro_long_break_minutes: true,
         degree_target_cfu: true,
+        secret_token: true,
       },
     });
   } catch (error) {
@@ -200,7 +202,7 @@ export default async function SettingsPage() {
         </form>
       </Card>
 
-      <ExternalCalendarImport />
+      <ExternalCalendarImport secretToken={user.secret_token} />
     </div>
   );
 }
