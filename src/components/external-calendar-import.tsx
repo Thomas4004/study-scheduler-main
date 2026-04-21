@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Upload } from "lucide-react";
 
 interface ExternalCalendar {
   id: string;
@@ -34,6 +35,8 @@ export function ExternalCalendarImport() {
 
   const [calendarName, setCalendarName] = useState("");
   const [calendarUrl, setCalendarUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<"url" | "file">("url");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -61,7 +64,7 @@ export function ExternalCalendarImport() {
     }
   };
 
-  const handleImport = () => {
+  const handleImportUrl = () => {
     setError(null);
     setSuccess(null);
 
@@ -125,6 +128,69 @@ export function ExternalCalendarImport() {
         );
       }
     });
+  };
+
+  const handleImportFile = () => {
+    setError(null);
+    setSuccess(null);
+
+    // Validate inputs
+    if (!calendarName.trim()) {
+      setError("Calendar name is required");
+      return;
+    }
+
+    if (!selectedFile) {
+      setError("File is required");
+      return;
+    }
+
+    if (!selectedFile.name.toLowerCase().endsWith(".ics")) {
+      setError("File must be an .ics file");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("name", calendarName);
+
+        const response = await fetch("/api/calendar/import-file", {
+          method: "POST",
+          headers: {
+            "x-secret-key": localStorage.getItem("secret_token") || "",
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to import calendar file");
+        }
+
+        const newCalendar = await response.json();
+        setCalendars([newCalendar, ...calendars]);
+        setSuccess("Calendar file imported successfully!");
+        setCalendarName("");
+        setSelectedFile(null);
+        setShowForm(false);
+
+        router.refresh();
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to import calendar file"
+        );
+      }
+    });
+  };
+
+  const handleImport = () => {
+    if (importMode === "url") {
+      handleImportUrl();
+    } else {
+      handleImportFile();
+    }
   };
 
   const handleDelete = (calendarId: string) => {
@@ -233,6 +299,32 @@ export function ExternalCalendarImport() {
           </Button>
         ) : (
           <div className="space-y-3 rounded-xl border border-border/70 bg-background px-4 py-4">
+            {/* Mode Selector */}
+            <div className="flex gap-2 rounded-lg bg-muted/50 p-1">
+              <button
+                onClick={() => setImportMode("url")}
+                className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                  importMode === "url"
+                    ? "bg-background text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                disabled={isPending}
+              >
+                From URL
+              </button>
+              <button
+                onClick={() => setImportMode("file")}
+                className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                  importMode === "file"
+                    ? "bg-background text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                disabled={isPending}
+              >
+                From File
+              </button>
+            </div>
+
             <div className="space-y-2">
               <label
                 htmlFor="calendar-name"
@@ -249,31 +341,58 @@ export function ExternalCalendarImport() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="calendar-url"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Calendar URL (iCal/ICS link)
-              </label>
-              <Input
-                id="calendar-url"
-                placeholder="https://calendar.google.com/calendar/ics/... or webcal://..."
-                value={calendarUrl}
-                onChange={(e) => setCalendarUrl(e.target.value)}
-                disabled={isPending}
-                type="url"
-              />
-              <p className="text-xs text-muted-foreground">
-                Right-click any shared calendar and copy the public link/ICS URL
-              </p>
-            </div>
+            {importMode === "url" ? (
+              <div className="space-y-2">
+                <label
+                  htmlFor="calendar-url"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Calendar URL (iCal/ICS link)
+                </label>
+                <Input
+                  id="calendar-url"
+                  placeholder="https://calendar.google.com/calendar/ics/... or webcal://..."
+                  value={calendarUrl}
+                  onChange={(e) => setCalendarUrl(e.target.value)}
+                  disabled={isPending}
+                  type="url"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Right-click any shared calendar and copy the public link/ICS URL
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label
+                  htmlFor="calendar-file"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Calendar File (.ics)
+                </label>
+                <input
+                  id="calendar-file"
+                  type="file"
+                  accept=".ics"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  disabled={isPending}
+                  className="block w-full text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                {selectedFile && (
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload an .ics file from your computer
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 onClick={handleImport}
-                disabled={isPending || !calendarName || !calendarUrl}
+                disabled={isPending || !calendarName || (importMode === "url" ? !calendarUrl : !selectedFile)}
                 className="flex-1"
               >
                 {isPending ? "Importing..." : "Import"}
@@ -281,7 +400,12 @@ export function ExternalCalendarImport() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setSelectedFile(null);
+                  setCalendarUrl("");
+                  setCalendarName("");
+                }}
                 disabled={isPending}
               >
                 Cancel
