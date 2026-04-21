@@ -33,10 +33,13 @@ export async function POST(request: NextRequest) {
       const response = await fetch(url, {
         method: "GET",
         headers: {
-          "Accept": "text/calendar, application/ics",
+          Accept: "text/calendar, application/ics",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "it-IT,it;q=0.9",
+          Referer: "https://www.google.com/",
         },
-        // timeout
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!response.ok) {

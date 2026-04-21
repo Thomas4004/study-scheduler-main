@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, RefreshCw, AlertCircle } from "lucide-react";
 
+import { validateCalendarUrlProxy } from "@/app/settings/calendar-actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -85,6 +86,14 @@ export function ExternalCalendarImport() {
 
     startTransition(async () => {
       try {
+        // First, validate the calendar URL using server action (with proper User-Agent)
+        const validationResult = await validateCalendarUrlProxy(calendarUrl);
+        
+        if (!validationResult.success) {
+          throw new Error(validationResult.error || "Invalid calendar URL");
+        }
+
+        // Now import the calendar
         const response = await fetch("/api/calendar/import", {
           method: "POST",
           headers: {
@@ -150,7 +159,7 @@ export function ExternalCalendarImport() {
     startTransition(async () => {
       try {
         const response = await fetch(
-          `/api/calendar/sync/${calendarId}`,
+          `/api/calendar/sync-proxy/${calendarId}`,
           {
             headers: {
               "x-secret-key": localStorage.getItem("secret_token") || "",
