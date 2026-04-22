@@ -46,33 +46,13 @@ function isAuthorized(request: NextRequest) {
   return request.cookies.get(AUTH_COOKIE_NAME)?.value === AUTH_COOKIE_VALUE;
 }
 
-async function isApiAuthorized(request: NextRequest) {
+function isApiAuthorized(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/api/")) {
     return false;
   }
 
   const secretKey = request.headers.get("x-secret-key");
-  if (!secretKey) {
-    return false;
-  }
-
-  // Import prisma dynamically to avoid issues in middleware
-  try {
-    const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
-
-    const user = await prisma.user.findFirst({
-      where: {
-        secret_token: secretKey,
-      },
-    });
-
-    await prisma.$disconnect();
-    return !!user;
-  } catch (error) {
-    console.error("Error checking API authorization:", error);
-    return false;
-  }
+  return !!secretKey; // Simple check - actual validation happens in API routes
 }
 
 function isMagicKeyUnlock(request: NextRequest) {
@@ -118,13 +98,13 @@ function maintenanceResponse(request: NextRequest) {
   });
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   if (isAuthorized(request)) {
     return NextResponse.next();
   }
 
   // Check API authorization for API routes
-  if (await isApiAuthorized(request)) {
+  if (isApiAuthorized(request)) {
     return NextResponse.next();
   }
 
