@@ -32,7 +32,7 @@ export default async function SettingsPage() {
   let user: SettingsUserRecord | null = null;
 
   try {
-    user = await prisma.user.findFirst({
+    const foundUser = await prisma.user.findFirst({
       select: {
         id: true,
         pomodoro_focus_minutes: true,
@@ -42,6 +42,13 @@ export default async function SettingsPage() {
         secret_token: true,
       },
     });
+    
+    user = foundUser 
+      ? {
+          ...foundUser,
+          secret_token: foundUser.secret_token || "",
+        }
+      : null;
   } catch (error) {
     const hasMissingSettingsColumn =
       isMissingColumnError(error, "pomodoro_focus_minutes") ||
@@ -57,6 +64,7 @@ export default async function SettingsPage() {
       select: {
         id: true,
         max_focus_minutes: true,
+        secret_token: true,
       },
     });
 
@@ -67,6 +75,7 @@ export default async function SettingsPage() {
           pomodoro_short_break_minutes: 5,
           pomodoro_long_break_minutes: 15,
           degree_target_cfu: 180,
+          secret_token: legacyUser.secret_token || "",
         }
       : null;
   }
