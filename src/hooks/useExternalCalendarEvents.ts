@@ -19,8 +19,27 @@ export function useExternalCalendarEvents(secretToken: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get the secret key from URL params or cookies
+  const getSecretKey = (): string => {
+    if (typeof window === "undefined") return secretToken || "";
+    
+    // Try URL params first
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyFromUrl = urlParams.get("key");
+    if (keyFromUrl) return keyFromUrl;
+    
+    // Try cookies
+    const cookies = document.cookie.split(";").reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split("=");
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+    
+    return cookies["personal_secret_key"] || secretToken || "";
+  };
+
   useEffect(() => {
-    if (!secretToken) return;
+    if (!getSecretKey()) return;
 
     const loadEvents = async () => {
       setIsLoading(true);
@@ -30,7 +49,7 @@ export function useExternalCalendarEvents(secretToken: string | null) {
         // Fetch list of external calendars
         const calendarsResponse = await fetch("/api/calendar/external", {
           headers: {
-            "x-secret-key": secretToken,
+            "x-api-key": getSecretKey(),
           },
         });
 

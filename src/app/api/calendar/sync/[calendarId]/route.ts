@@ -8,7 +8,11 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const secretKey = request.headers.get("x-secret-key");
+    // Try different header names for the secret key
+    const secretKey = 
+      request.headers.get("x-secret-key") || 
+      request.headers.get("x-api-key") || 
+      request.headers.get("authorization")?.replace("Bearer ", "");
 
     const user = await prisma.user.findFirst({
       where: {
@@ -108,7 +112,11 @@ export async function DELETE(
 ) {
   try {
     const params = await context.params;
-    const secretKey = request.headers.get("x-secret-key");
+    // Try different header names for the secret key
+    const secretKey = 
+      request.headers.get("x-secret-key") || 
+      request.headers.get("x-api-key") || 
+      request.headers.get("authorization")?.replace("Bearer ", "");
 
     const user = await prisma.user.findFirst({
       where: {

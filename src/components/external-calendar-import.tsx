@@ -44,12 +44,31 @@ export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportPr
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Get the secret key from URL params or cookies
+  const getSecretKey = (): string => {
+    if (typeof window === "undefined") return secretToken;
+    
+    // Try URL params first
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyFromUrl = urlParams.get("key");
+    if (keyFromUrl) return keyFromUrl;
+    
+    // Try cookies
+    const cookies = document.cookie.split(";").reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split("=");
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+    
+    return cookies["personal_secret_key"] || secretToken;
+  };
+
   const loadCalendars = async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/calendar/external", {
         headers: {
-          "x-secret-key": secretToken,
+          "x-api-key": getSecretKey(),
         },
       });
 
@@ -105,7 +124,7 @@ export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportPr
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-secret-key": secretToken,
+            "x-api-key": getSecretKey(),
           },
           body: JSON.stringify({
             name: calendarName,
@@ -163,7 +182,7 @@ export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportPr
         const response = await fetch("/api/calendar/import-file", {
           method: "POST",
           headers: {
-            "x-secret-key": secretToken,
+            "x-api-key": getSecretKey(),
           },
           body: formData,
         });
@@ -205,7 +224,7 @@ export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportPr
           {
             method: "DELETE",
             headers: {
-              "x-secret-key": secretToken,
+              "x-api-key": getSecretKey(),
             },
           }
         );
@@ -232,7 +251,7 @@ export function ExternalCalendarImport({ secretToken }: ExternalCalendarImportPr
           `/api/calendar/sync-proxy/${calendarId}`,
           {
             headers: {
-              "x-secret-key": secretToken,
+              "x-api-key": getSecretKey(),
             },
           }
         );

@@ -3,7 +3,11 @@ import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
-    const secretKey = request.headers.get("x-secret-key");
+    // Try different header names for the secret key
+    const secretKey = 
+      request.headers.get("x-secret-key") || 
+      request.headers.get("x-api-key") || 
+      request.headers.get("authorization")?.replace("Bearer ", "");
 
     const user = await prisma.user.findFirst({
       where: {
